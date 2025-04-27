@@ -7,25 +7,41 @@ const path = require('path');
 // Create a new resident
 exports.createResident = async (req, res) => {
   try {
+    console.log('Raw request body:', req.body);
     const residentData = req.body;
     
+    // Convert birthdate to dateOfBirth to match the model
+    if (residentData.birthdate && !residentData.dateOfBirth) {
+      residentData.dateOfBirth = residentData.birthdate;
+      delete residentData.birthdate;
+    }
+    
+    // Convert address string to address object if needed
+    if (typeof residentData.address === 'string') {
+      residentData.address = {
+        street: residentData.address,
+        houseNumber: '',
+        barangay: '',
+        city: '',
+        province: '',
+        zipCode: ''
+      };
+    }
+    
     // Log received data for debugging
-    console.log('Received data:', JSON.stringify(residentData, null, 2));
+    console.log('Processed data:', JSON.stringify(residentData, null, 2));
     
     // Validate required fields
-    if (!residentData.firstName || !residentData.lastName || !residentData.dateOfBirth || 
-        !residentData.gender || !residentData.civilStatus || !residentData.contactNumber) {
+    const requiredFields = ['firstName', 'lastName', 'dateOfBirth', 'gender', 'civilStatus', 'contactNumber'];
+    const missingFields = requiredFields.filter(field => !residentData[field]);
+    
+    if (missingFields.length > 0) {
+      console.log('Missing fields:', missingFields);
       return res.status(400).json({
         success: false,
         message: 'Missing required fields',
-        missingFields: {
-          firstName: !residentData.firstName,
-          lastName: !residentData.lastName,
-          dateOfBirth: !residentData.dateOfBirth,
-          gender: !residentData.gender,
-          civilStatus: !residentData.civilStatus,
-          contactNumber: !residentData.contactNumber
-        }
+        missingFields: missingFields,
+        receivedData: residentData
       });
     }
     
