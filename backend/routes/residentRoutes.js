@@ -1,7 +1,7 @@
 // routes/residentRoutes.js
 const express = require('express');
 const router = express.Router();
-const residentController = require('../controllers/residentControllers'); // Make sure this matches your file name
+const residentController = require('../controllers/residentControllers'); // Note: with 's' at the end
 
 // Create a new resident
 router.post('/', residentController.createResident);
@@ -21,10 +21,10 @@ router.delete('/:id', residentController.deleteResident);
 // Generate QR code for resident
 router.get('/:id/qrcode', residentController.generateQRCode);
 
-// Backup residents data
-router.get('/backup/export', residentController.exportResidents);
+// Export residents data
+router.get('/export', residentController.exportResidents);
 
-// Restore residents data
-router.post('/backup/import', residentController.importResidents);
+// Import residents data
+router.post('/import', residentController.importResidents);
 
 module.exports = router;

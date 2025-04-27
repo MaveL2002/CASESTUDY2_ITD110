@@ -1,4 +1,4 @@
-// controllers/residentControllers.js
+// controllers/residentController.js
 const Resident = require('../models/Resident');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -222,38 +222,130 @@ exports.generateQRCode = async (req, res) => {
   }
 };
 
-// Export residents data
+// Export residents data (supports both JSON and CSV)
 exports.exportResidents = async (req, res) => {
   try {
-    const residents = await Resident.find();
-    const exportData = JSON.stringify(residents, null, 2);
+    console.log('Export request received. Format:', req.query.format);
+    const format = req.query.format || 'json'; // Default to JSON
+    
+    // Fetch residents data
+    console.log('Fetching residents from database...');
+    const residents = await Resident.find().lean(); // Use .lean() for better performance
+    console.log(`Found ${residents.length} residents`);
     
     // Create backup directory if it doesn't exist
     const backupDir = path.join(__dirname, '../backups');
+    console.log('Backup directory path:', backupDir);
+    
     if (!fs.existsSync(backupDir)) {
-      fs.mkdirSync(backupDir);
+      console.log('Creating backup directory...');
+      fs.mkdirSync(backupDir, { recursive: true });
     }
 
-    // Generate filename with timestamp
-    const filename = `residents_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    const filepath = path.join(backupDir, filename);
-
-    // Write to file
-    fs.writeFileSync(filepath, exportData);
-
-    // Send file to client
-    res.download(filepath, filename, (err) => {
-      if (err) {
-        throw err;
+    if (format === 'csv') {
+      console.log('Converting to CSV format...');
+      // Convert to CSV format
+      const headers = ['residentId', 'firstName', 'lastName', 'middleName', 'dateOfBirth', 
+                      'gender', 'civilStatus', 'contactNumber', 'email', 'address_street',
+                      'address_houseNumber', 'address_barangay', 'address_city', 
+                      'address_province', 'address_zipCode', 'occupation', 'monthlyIncome',
+                      'voterStatus', 'registrationDate', 'status'];
+      
+      const csvRows = [];
+      csvRows.push(headers.join(','));
+      
+      for (const resident of residents) {
+        const row = headers.map(header => {
+          if (header.startsWith('address_')) {
+            const addressField = header.split('_')[1];
+            const value = resident.address ? resident.address[addressField] : '';
+            return `"${(value || '').toString().replace(/"/g, '""')}"`;
+          }
+          if (header === 'dateOfBirth' || header === 'registrationDate') {
+            return resident[header] ? new Date(resident[header]).toISOString() : '';
+          }
+          const value = resident[header];
+          return `"${(value !== null && value !== undefined ? value : '').toString().replace(/"/g, '""')}"`;
+        });
+        csvRows.push(row.join(','));
       }
-      // Optionally delete the file after sending
-      // fs.unlinkSync(filepath);
-    });
+      
+      const csvContent = csvRows.join('\n');
+
+      // Generate filename with timestamp
+      const filename = `residents_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
+      const filepath = path.join(backupDir, filename);
+      console.log('Writing CSV file to:', filepath);
+
+      // Write to file
+      fs.writeFileSync(filepath, csvContent, 'utf8');
+
+      // Send file to client
+      console.log('Sending CSV file to client...');
+      res.download(filepath, filename, (err) => {
+        if (err) {
+          console.error('Error sending file:', err);
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              message: 'Error sending file',
+              error: err.message
+            });
+          }
+        } else {
+          // Delete the file after successful sending
+          try {
+            fs.unlinkSync(filepath);
+            console.log('Temporary file deleted');
+          } catch (unlinkErr) {
+            console.error('Error deleting temporary file:', unlinkErr);
+          }
+        }
+      });
+    } else {
+      console.log('Converting to JSON format...');
+      // Export as JSON
+      const exportData = JSON.stringify(residents, null, 2);
+      
+      // Generate filename with timestamp
+      const filename = `residents_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      const filepath = path.join(backupDir, filename);
+      console.log('Writing JSON file to:', filepath);
+
+      // Write to file
+      fs.writeFileSync(filepath, exportData, 'utf8');
+
+      // Send file to client
+      console.log('Sending JSON file to client...');
+      res.download(filepath, filename, (err) => {
+        if (err) {
+          console.error('Error sending file:', err);
+          if (!res.headersSent) {
+            res.status(500).json({
+              success: false,
+              message: 'Error sending file',
+              error: err.message
+            });
+          }
+        } else {
+          // Delete the file after successful sending
+          try {
+            fs.unlinkSync(filepath);
+            console.log('Temporary file deleted');
+          } catch (unlinkErr) {
+            console.error('Error deleting temporary file:', unlinkErr);
+          }
+        }
+      });
+    }
   } catch (error) {
+    console.error('Export error details:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error exporting residents data',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

@@ -2,14 +2,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 require('dotenv').config();
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // Built-in body parser for JSON
-app.use(express.urlencoded({ extended: true })); // Built-in body parser for URL-encoded data
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI)
@@ -24,16 +25,6 @@ app.get('/', (req, res) => {
 // Routes
 const residentRoutes = require('./routes/residentRoutes');
 app.use('/api/residents', residentRoutes);
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Something went wrong!',
-    error: err.message
-  });
-});
 
 // Start server
 const PORT = process.env.PORT || 5000;
