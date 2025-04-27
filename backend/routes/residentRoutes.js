@@ -9,7 +9,10 @@ router.post('/', residentController.createResident);
 // Get all residents
 router.get('/', residentController.getAllResidents);
 
-// Get resident by ID
+// Export residents data - must be before /:id routes
+router.get('/export', residentController.exportResidents);
+
+// Get resident by ID - must be after specific routes
 router.get('/:id', residentController.getResidentById);
 
 // Update resident
@@ -20,9 +23,6 @@ router.delete('/:id', residentController.deleteResident);
 
 // Generate QR code for resident
 router.get('/:id/qrcode', residentController.generateQRCode);
-
-// Export residents data
-router.get('/export', residentController.exportResidents);
 
 // Import residents data
 router.post('/import', residentController.importResidents);
