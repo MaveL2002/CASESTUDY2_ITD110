@@ -1,4 +1,4 @@
-// controllers/residentController.js
+// controllers/residentControllers.js
 const Resident = require('../models/Resident');
 const QRCode = require('qrcode');
 const fs = require('fs');
@@ -9,6 +9,26 @@ exports.createResident = async (req, res) => {
   try {
     const residentData = req.body;
     
+    // Log received data for debugging
+    console.log('Received data:', JSON.stringify(residentData, null, 2));
+    
+    // Validate required fields
+    if (!residentData.firstName || !residentData.lastName || !residentData.dateOfBirth || 
+        !residentData.gender || !residentData.civilStatus || !residentData.contactNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        missingFields: {
+          firstName: !residentData.firstName,
+          lastName: !residentData.lastName,
+          dateOfBirth: !residentData.dateOfBirth,
+          gender: !residentData.gender,
+          civilStatus: !residentData.civilStatus,
+          contactNumber: !residentData.contactNumber
+        }
+      });
+    }
+    
     // Generate unique resident ID
     const residentId = `BR${Date.now()}${Math.floor(Math.random() * 1000)}`;
     residentData.residentId = residentId;
@@ -17,13 +37,27 @@ exports.createResident = async (req, res) => {
     const qrData = JSON.stringify({
       residentId: residentId,
       name: `${residentData.firstName} ${residentData.lastName}`,
-      barangay: residentData.address.barangay
+      barangay: residentData.address?.barangay || ''
     });
     
     const qrCodeUrl = await QRCode.toDataURL(qrData);
     residentData.qrCode = qrCodeUrl;
 
+    // Create new resident
     const resident = new Resident(residentData);
+    
+    // Validate model before saving
+    const validationError = resident.validateSync();
+    if (validationError) {
+      console.error('Validation error:', validationError);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        error: validationError.message,
+        details: validationError.errors
+      });
+    }
+    
     await resident.save();
 
     res.status(201).json({
@@ -32,10 +66,12 @@ exports.createResident = async (req, res) => {
       data: resident
     });
   } catch (error) {
+    console.error('Error creating resident:', error);
     res.status(400).json({
       success: false,
       message: 'Error creating resident',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };

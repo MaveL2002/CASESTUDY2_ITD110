@@ -4,12 +4,12 @@ const mongoose = require('mongoose');
 const residentSchema = new mongoose.Schema({
   firstName: {
     type: String,
-    required: true,
+    required: [true, 'First name is required'],
     trim: true
   },
   lastName: {
     type: String,
-    required: true,
+    required: [true, 'Last name is required'],
     trim: true
   },
   middleName: {
@@ -18,40 +18,48 @@ const residentSchema = new mongoose.Schema({
   },
   dateOfBirth: {
     type: Date,
-    required: true
+    required: [true, 'Date of birth is required']
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female', 'Other'],
-    required: true
+    enum: {
+      values: ['Male', 'Female', 'Other'],
+      message: '{VALUE} is not supported'
+    },
+    required: [true, 'Gender is required']
   },
   civilStatus: {
     type: String,
-    enum: ['Single', 'Married', 'Widowed', 'Separated', 'Divorced'],
-    required: true
+    enum: {
+      values: ['Single', 'Married', 'Widowed', 'Separated', 'Divorced'],
+      message: '{VALUE} is not supported'
+    },
+    required: [true, 'Civil status is required']
   },
   contactNumber: {
     type: String,
-    required: true
+    required: [true, 'Contact number is required']
   },
   email: {
     type: String,
     trim: true
   },
   address: {
-    street: String,
-    houseNumber: String,
-    barangay: String,
-    city: String,
-    province: String,
-    zipCode: String
+    street: { type: String, default: '' },
+    houseNumber: { type: String, default: '' },
+    barangay: { type: String, default: '' },
+    city: { type: String, default: '' },
+    province: { type: String, default: '' },
+    zipCode: { type: String, default: '' }
   },
   occupation: {
     type: String,
-    trim: true
+    trim: true,
+    default: ''
   },
   monthlyIncome: {
-    type: Number
+    type: Number,
+    default: 0
   },
   voterStatus: {
     type: Boolean,
@@ -64,14 +72,17 @@ const residentSchema = new mongoose.Schema({
   residentId: {
     type: String,
     unique: true,
-    required: true
+    required: [true, 'Resident ID is required']
   },
   qrCode: {
     type: String
   },
   status: {
     type: String,
-    enum: ['Active', 'Inactive', 'Deceased', 'Transferred'],
+    enum: {
+      values: ['Active', 'Inactive', 'Deceased', 'Transferred'],
+      message: '{VALUE} is not supported'
+    },
     default: 'Active'
   }
 }, {

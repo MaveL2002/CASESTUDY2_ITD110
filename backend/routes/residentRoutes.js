@@ -1,7 +1,7 @@
 // routes/residentRoutes.js
 const express = require('express');
 const router = express.Router();
-const residentController = require('../controllers/residentController');
+const residentController = require('../controllers/residentControllers'); // Make sure this matches your file name
 
 // Create a new resident
 router.post('/', residentController.createResident);
